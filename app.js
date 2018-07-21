@@ -5,16 +5,17 @@ var logger = require('morgan');
 var mysql = require('mysql');
 var bodyParser = require('body-parser');
 
-
-
 var app = express();
 
 app.use(logger('dev'));
+
 app.use(express.json());
 app.use(express.urlencoded({
     extended: false
 }));
+
 app.use(cookieParser());
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(bodyParser.urlencoded({
@@ -42,8 +43,6 @@ var entryRouter = require('./routes/entries');
 app.use('/api/v1/raffles', raffleRouter);
 app.use('/api/v1/people', personRouter);
 app.use('/api/v1/entries', entryRouter);
-
-
 app.use('/users', usersRouter);
 
 module.exports = app;
