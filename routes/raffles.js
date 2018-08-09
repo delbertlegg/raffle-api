@@ -4,8 +4,7 @@ var common = require('../public/javascripts/common');
 var deserializer = require('../public/javascripts/deserializer');
 
 
-router.get('/', function (req, res, next) {
-    var query = '';
+router.get('/', function (req, res) {
     if (req.query.id) {
         global.connection.query('SELECT * from raffle WHERE raffle_id=?', [req.query.id], function (error, results, fields) {
             if (error) throw error;
@@ -21,7 +20,7 @@ router.get('/', function (req, res, next) {
 
 });
 
-router.get('/draw', function (req, res, next) {
+router.get('/draw', function (req, res) {
     var raffleId = req.query.raffleId;
     if (raffleId) {
         drawWinnerForRaffle(raffleId, res);
@@ -31,7 +30,6 @@ router.get('/draw', function (req, res, next) {
 });
 
 router.post('/', function (req, res) {
-    console.log(req.body.name);
     global.connection.query('INSERT INTO raffle(name, prize_dscrptn) VALUES(?, ?)', [req.body.name, req.body.prizeDescription], function (error, result) {
         if (error) throw error;
         global.connection.query('SELECT * from raffle where name=?', [req.body.name], function (error, results, fields) {
@@ -51,7 +49,6 @@ function drawWinnerForRaffle(raffleId, res) {
     global.connection.query(query, [+raffleId], function (error, entryResults, fields) {
         if (error) throw error;
         var randomNumber = Math.ceil(Math.random() * entryResults.length) - 1;
-        console.log(randomNumber);
         common.handleSuccess(res, deserializer.personDeserializer(entryResults[randomNumber]));
     });
 }

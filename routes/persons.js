@@ -27,7 +27,7 @@ router.get('/', function (req, res, next) {
 
 /** Get by Id */
 router.get('/:id', function (req, res, next) {
-    global.connection.query('SELECT * from person WHERE person_id=?', [req.params.id], function (error, results, fields) {
+    global.connection.query('SELECT * from person WHERE person_id=?', [req.params.id], function (error, results) {
         if (error) throw error;
         common.handleSuccess(res, deserializer.personDeserializer(results[0]));
     });
@@ -35,13 +35,13 @@ router.get('/:id', function (req, res, next) {
 
 router.post('/', function (req, res) {
     const person = req.body;
-    global.connection.query('INSERT INTO person (first_name, last_name, email_address, phone_number) VALUES(?, ?, ?, ?)', [person.firstName, person.lastName, person.emailAddress, person.phoneNumber], function (error, results) {
+    global.connection.query('INSERT INTO person (first_name, last_name, email_address, phone_number) VALUES(?, ?, ?, ?)', [person.firstName, person.lastName, person.emailAddress, person.phoneNumber], function (error) {
         if (error) {
             if (error.errno === 1062) {
                 // do nothing
             } else throw error;
         };
-        global.connection.query('SELECT * from person where email_address=? AND phone_number=?', [person.emailAddress, person.phoneNumber], function (error, queryRes, fields) {
+        global.connection.query('SELECT * from person where email_address=? AND phone_number=?', [person.emailAddress, person.phoneNumber], function (error, queryRes) {
             if (error) throw error;
             common.handleSuccess(res, deserializer.personDeserializer(queryRes[0]));
         });
