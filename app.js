@@ -5,6 +5,9 @@ var logger = require('morgan');
 var mysql = require('mysql');
 var bodyParser = require('body-parser');
 
+var env = process.env.NODE_ENV || 'development';
+var config = require('./config')[env];
+
 var app = express();
 
 app.use(logger('dev'));
@@ -25,10 +28,10 @@ app.use(bodyParser.json());
 
 app.use(function (req, res, next) {
     global.connection = mysql.createConnection({
-        host: 'localhost',
-        user: 'root',
-        password: 'password',
-        database: 'raffle'
+        host: config.database.host,
+        user: config.database.user,
+        password: config.database.password,
+        database: config.database.db
     });
     connection.connect();
     next();
