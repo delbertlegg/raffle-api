@@ -25,5 +25,16 @@ module.exports = {
             personId: entry.person_id
         };
         return e;
+    },
+
+    winnerDeserializer: function (entry) {
+        var winner = {
+            id: entry.raffle_id,
+            ticketNumber: entry.ticket_number,
+            raffleName: entry.raffle_name,
+            winner: module.exports.personDeserializer(entry),
+            prizeClaimed: entry.prize_claimed_flag
+        };
+        return winner;
     }
 }

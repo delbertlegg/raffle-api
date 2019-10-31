@@ -7,18 +7,21 @@ var deserializer = require('../public/javascripts/deserializer');
 router.get('/', function (req, res, next) {
     const email = req.query.emailAddress;
     const phoneNumber = req.query.phoneNumber;
+    var connection = common.getConnection();
     var query, arg;
     if (email || phoneNumber) {
         query = common.buildQuery('person', email ? 'email_address' : 'phone_number');
         arg = email ? email : phoneNumber;
-        global.connection.query(query, [arg], function (error, results, fields) {
+        connection.query(query, [arg], function (error, results, fields) {
             if (error) throw error;
             var people = results.map(result => deserializer.personDeserializer(result));
+            connection.end();
             common.handleSuccess(res, people);
         });
     } else {
-        global.connection.query('SELECT * from person', function (error, results, fields) {
+        connection.query('SELECT * from person', function (error, results, fields) {
             if (error) throw error;
+            connection.end();
             common.handleSuccess(res, results);
         });
     }
@@ -27,22 +30,26 @@ router.get('/', function (req, res, next) {
 
 /** Get by Id */
 router.get('/:id', function (req, res, next) {
-    global.connection.query('SELECT * from person WHERE person_id=?', [req.params.id], function (error, results) {
+    var connection = common.getConnection();
+    connection.query('SELECT * from person WHERE person_id=?', [req.params.id], function (error, results) {
         if (error) throw error;
+        connection.end();
         common.handleSuccess(res, deserializer.personDeserializer(results[0]));
     });
 })
 
 router.post('/', function (req, res) {
     const person = req.body;
-    global.connection.query('INSERT INTO person (first_name, last_name, email_address, phone_number) VALUES(?, ?, ?, ?)', [person.firstName, person.lastName, person.emailAddress, person.phoneNumber], function (error) {
+    var connection = common.getConnection();
+    connection.query('INSERT INTO person (first_name, last_name, email_address, phone_number) VALUES(?, ?, ?, ?)', [person.firstName, person.lastName, person.emailAddress, person.phoneNumber], function (error) {
         if (error) {
             if (error.errno === 1062) {
                 // do nothing
             } else throw error;
         };
-        global.connection.query('SELECT * from person where email_address=? AND phone_number=?', [person.emailAddress, person.phoneNumber], function (error, queryRes) {
+        connection.query('SELECT * from person where email_address=? AND phone_number=?', [person.emailAddress, person.phoneNumber], function (error, queryRes) {
             if (error) throw error;
+            connection.end();
             common.handleSuccess(res, deserializer.personDeserializer(queryRes[0]));
         });
     });

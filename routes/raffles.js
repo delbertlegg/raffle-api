@@ -5,73 +5,59 @@ var deserializer = require('../public/javascripts/deserializer');
 
 
 router.get('/', function (req, res) {
-    if (req.query.id) {
-        global.connection.query('SELECT * from raffle WHERE raffle_id=?', [req.query.id], function (error, results, fields) {
-            if (error) throw error;
-            common.handleSuccess(res, deserializer.raffleDeserializer(results[0]));
-        });
-    } else {
-        global.connection.query('SELECT * from raffle', function (error, results, fields) {
-            if (error) throw error;
-            const raffles = results.map(result => deserializer.raffleDeserializer(result));
-            common.handleSuccess(res, raffles);
-        });
+    var raffleId = req.query.id;
+    var query = 'SELECT * from raffle ';
+    if (raffleId) {
+        query += 'WHERE raffle_id=?'
     }
-
+    var connection = common.getConnection();
+    connection.query(query, [req.query.id || null], function (error, results, fields) {
+        if (error) throw error;
+        const raffles = results.map(result => deserializer.raffleDeserializer(result));
+        connection.end();
+        common.handleSuccess(res, raffles);
+    });
 });
 
 router.get('/draw', function (req, res) {
     var raffleId = req.query.raffleId;
+    var query = "SELECT e.*, p.* , r.* " +
+        "FROM entry e " +
+        "INNER JOIN person p ON e.person_id = p.person_id " +
+        "INNER JOIN raffle r ON e.raffle_id = r.raffle_id " +
+        "LEFT JOIN winner w on r.raffle_id = w.raffle_id && w.prize_claimed_flag = 0 ";
     if (raffleId) {
-        drawWinnerForRaffle(raffleId, res);
-    } else {
-        drawAllWinners(res)
+        query += "WHERE e.raffle_id = ?";
     }
-});
-
-router.post('/', function (req, res) {
-    global.connection.query('INSERT INTO raffle(name, prize_dscrptn) VALUES(?, ?)', [req.body.name, req.body.prizeDescription], function (error, result) {
-        if (error) throw error;
-        global.connection.query('SELECT * from raffle where name=?', [req.body.name], function (error, results, fields) {
-            if (error) throw error;
-            common.handleSuccess(res, deserializer.raffleDeserializer(results[0]));
-        });
-    });
-});
-
-
-
-function drawWinnerForRaffle(raffleId, res) {
-    var query = "SELECT e.*, p.* " +
-        "FROM entry e " +
-        "INNER JOIN person p ON e.person_id = p.person_id " +
-        "WHERE e.raffle_id = ?";
-    global.connection.query(query, [+raffleId], function (error, entryResults, fields) {
-        if (error) throw error;
-        var randomNumber = Math.ceil(Math.random() * entryResults.length) - 1;
-        common.handleSuccess(res, deserializer.personDeserializer(entryResults[randomNumber]));
-    });
-}
-
-function drawAllWinners(res) {
-    var query = "SELECT e.*, p.*, r.name as raffle_name " +
-        "FROM entry e " +
-        "INNER JOIN person p ON e.person_id = p.person_id " +
-        "INNER JOIN raffle r on e.raffle_id = r.raffle_id";
-    global.connection.query(query, function (error, entryResults, fields) {
+    var connection = common.getConnection();
+    connection.query(query, [+raffleId || null], function (error, entryResults, fields) {
         var results = {};
         var raffleIds = new Set(entryResults.map(entry => entry.raffle_id));
         raffleIds.forEach(id => {
             var raffleEntries = entryResults.filter(entry => entry.raffle_id === id);
             var randomNumber = Math.ceil(Math.random() * raffleEntries.length) - 1;
             var winner = raffleEntries[randomNumber];
-            results[winner.raffle_name] = {
+            results[winner.raffle_id] = {
                 ticketNumber: winner.entry_id,
+                raffleName: winner.name,
                 winner: deserializer.personDeserializer(winner)
             };
         })
+        connection.end();
         common.handleSuccess(res, results);
     });
-}
+});
+
+router.post('/', function (req, res) {
+    var connection = common.getConnection();
+    connection.query('INSERT INTO raffle(name, prize_dscrptn) VALUES(?, ?)', [req.body.name, req.body.prizeDescription], function (error, result) {
+        if (error) throw error;
+        connection.query('SELECT * from raffle where name=?', [req.body.name], function (error, results, fields) {
+            if (error) throw error;
+            connection.end();
+            common.handleSuccess(res, deserializer.raffleDeserializer(results[0]));
+        });
+    });
+});
 
 module.exports = router;
